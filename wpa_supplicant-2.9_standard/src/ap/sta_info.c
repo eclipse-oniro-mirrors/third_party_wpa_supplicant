@@ -352,6 +352,12 @@ void ap_free_sta(struct hostapd_data *hapd, struct sta_info *sta)
 	ap_sta_clear_disconnect_timeouts(hapd, sta);
 	sae_clear_retransmit_timer(hapd, sta);
 
+#ifdef CARPLAY_SUPPORTED
+	eloop_cancel_timeout(ap_sta_rssi_poll, hapd, sta);
+	os_memcpy(hapd->last_mac, sta->addr, ETH_ALEN);
+	hapd->last_rssi = sta->last_rssi;
+#endif
+
 	ieee802_1x_free_station(hapd, sta);
 
 #ifdef CONFIG_IEEE80211BE
@@ -873,6 +879,9 @@ struct sta_info * ap_sta_add(struct hostapd_data *hapd, const u8 *addr)
 	sta->last_seq_ctrl = WLAN_INVALID_MGMT_SEQ;
 	dl_list_init(&sta->ip6addr);
 
+#ifdef CARPLAY_SUPPORTED
+	sta->last_rssi = INVALID_RSSI_VALUE;
+#endif
 #ifdef CONFIG_TAXONOMY
 	sta_track_claim_taxonomy_info(hapd->iface, addr,
 				      &sta->probe_ie_taxonomy);
@@ -1685,7 +1694,7 @@ void ap_sta_set_authorized_event(struct hostapd_data *hapd,
 #ifdef CONFIG_VENDOR_EXT
 		int ret = wpa_vendor_ext_ap_disconnect(hapd, buf);
 		if (ret != 0) {
-#ifdef CONFIG_LIBWPA_VENDOR
+#if defined(CONFIG_LIBWPA_VENDOR) && !defined(CARPLAY_SUPPORTED)
 			struct HostapdApCbParm hostapdApCbParm = {};
 			result = os_snprintf((char *)hostapdApCbParm.content, WIFI_HOSTAPD_CB_CONTENT_LENGTH,
 				AP_STA_DISCONNECTED "%s", buf);

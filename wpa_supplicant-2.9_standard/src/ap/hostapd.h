@@ -43,6 +43,11 @@ struct mesh_conf;
 #define CTRL_IFACE_COOKIE_LEN 8
 #endif /* CONFIG_CTRL_IFACE_UDP */
 
+#ifdef CARPLAY_SUPPORTED
+#define AP_STA_RSSI_POLL_INTERVAL 3
+#define INVALID_RSSI_VALUE (-127)
+#endif
+
 struct hostapd_iface;
 struct hostapd_mld;
 
@@ -487,6 +492,10 @@ struct hostapd_data {
 
 	u64 scan_cookie; /* Scan instance identifier for the ongoing HT40 scan
 			  */
+#ifdef CARPLAY_SUPPORTED
+	s8 last_rssi;
+	u8 last_mac[ETH_ALEN];
+#endif
 };
 
 
@@ -733,6 +742,9 @@ struct hostapd_iface * hostapd_init(struct hapd_interfaces *interfaces,
 struct hostapd_iface *
 hostapd_interface_init_bss(struct hapd_interfaces *interfaces, const char *phy,
 			   const char *config_fname, int debug);
+#ifdef CARPLAY_SUPPORTED
+void ap_sta_rssi_poll(void *eloop_ctx, void *timeout_ctx);
+#endif
 void hostapd_new_assoc_sta(struct hostapd_data *hapd, struct sta_info *sta,
 			   int reassoc);
 void hostapd_interface_deinit_free(struct hostapd_iface *iface);

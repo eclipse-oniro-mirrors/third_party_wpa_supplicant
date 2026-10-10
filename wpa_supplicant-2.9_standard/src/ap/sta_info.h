@@ -257,6 +257,10 @@ struct sta_info {
 	/* Last Authentication/(Re)Association Request/Action frame subtype */
 	u8 last_subtype;
 
+#ifdef CARPLAY_SUPPORTED
+	s8 last_rssi;
+#endif
+
 #ifdef CONFIG_MBO
 	u8 cell_capa; /* 0 = unknown (not an MBO STA); otherwise,
 		       * enum mbo_cellular_capa values */
