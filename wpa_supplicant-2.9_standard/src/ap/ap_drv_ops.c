@@ -32,6 +32,8 @@
 #include "parameter.h"
 #define PARAM_VALUE_MAX_LEN 10
 #define CARPLAY_SUPPORT_TYPE_KEY "persist.poxiao.support_type"
+#define CARPLAY_SUPPORT_TYPE_COMMERCIAL "1"
+#define CARPLAY_SUPPORT_TYPE_CERTIFIED "2"
 #endif
 
 u32 hostapd_sta_flags_to_drv(u32 flags)
@@ -92,8 +94,8 @@ int hostapd_build_ap_extra_ies(struct hostapd_data *hapd,
 	char support_type[PARAM_VALUE_MAX_LEN] = {0};
 	int ret = GetParameter(CARPLAY_SUPPORT_TYPE_KEY, "", support_type,
 			sizeof(support_type));
-	if (ret > 0 && (os_strcmp(support_type, "1") == 0 ||
-		os_strcmp(support_type, "2") == 0)) {
+	if (ret > 0 && (os_strcmp(support_type, CARPLAY_SUPPORT_TYPE_COMMERCIAL) == 0 ||
+		os_strcmp(support_type, CARPLAY_SUPPORT_TYPE_CERTIFIED) == 0)) {
 		if (add_buf_data(&apple_ie, apple_device_ie,
 			sizeof(apple_device_ie)) < 0) {
 			goto fail;
@@ -248,13 +250,13 @@ int hostapd_build_ap_extra_ies(struct hostapd_data *hapd,
 	add_buf(&assocresp, hapd->conf->assocresp_elements);
 
 #ifdef CARPLAY_SUPPORTED
-	if (ret > 0 && (os_strcmp(support_type, "1") == 0 ||
-		os_strcmp(support_type, "2") == 0)) {
+	if (ret > 0 && (os_strcmp(support_type, CARPLAY_SUPPORT_TYPE_COMMERCIAL) == 0 ||
+		os_strcmp(support_type, CARPLAY_SUPPORT_TYPE_CERTIFIED) == 0)) {
 		add_buf(&beacon, apple_ie);
 		add_buf(&proberesp, apple_ie);
 		add_buf(&assocresp, apple_ie);
-		wpabuf_free(apple_ie);
 	}
+	wpabuf_free(apple_ie);
 #endif
 	*beacon_ret = beacon;
 	*proberesp_ret = proberesp;
