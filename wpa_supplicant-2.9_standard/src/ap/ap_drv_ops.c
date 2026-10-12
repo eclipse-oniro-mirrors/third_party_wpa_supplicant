@@ -31,6 +31,7 @@
 #ifdef CARPLAY_SUPPORTED
 #include "parameter.h"
 #define PARAM_VALUE_MAX_LEN 10
+#define CARPLAY_SUPPORT_TYPE_KEY "persist.poxiao.support_type"
 #endif
 
 u32 hostapd_sta_flags_to_drv(u32 flags)
@@ -89,7 +90,7 @@ int hostapd_build_ap_extra_ies(struct hostapd_data *hapd,
 		0x00, 0x00, 0x02, 0x10, 0x21
 	};
 	char support_type[PARAM_VALUE_MAX_LEN] = {0};
-	int ret = GetParameter("persist.poxiao.support_type", "", support_type,
+	int ret = GetParameter(CARPLAY_SUPPORT_TYPE_KEY, "", support_type,
 			sizeof(support_type));
 	if (ret > 0 && (os_strcmp(support_type, "1") == 0 ||
 		os_strcmp(support_type, "2") == 0)) {
