@@ -633,6 +633,10 @@ ohos_shared_library("wpa") {
   }
   cflags += ext_cflags
 
+  if (wpa_supplicant_vendor_ext && wpa_supplicant_carplay_supported) {
+    cflags += [ "-DCARPLAY_SUPPORTED" ]
+  }
+
   if (wpa_supplicant_ohos_certmgr) {
     sources += [ "$WPA_ROOT_DIR/wpa_supplicant_lib/wpa_evp_key.c" ]
     sources += cert_manager_sources

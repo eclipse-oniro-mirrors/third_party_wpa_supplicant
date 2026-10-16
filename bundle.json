@@ -32,7 +32,8 @@
             "wpa_supplicant_config_ext_auth",
             "wpa_supplicant_hisysevent_module",
             "wpa_supplicant_elevate_wpa_priority",
-            "wpa_supplicant_with_go_simulation_ap"
+            "wpa_supplicant_with_go_simulation_ap",
+            "wpa_supplicant_carplay_supported"
         ],
         "adapted_system_type": ["small","standard"],
         "rom": "2.1MB",

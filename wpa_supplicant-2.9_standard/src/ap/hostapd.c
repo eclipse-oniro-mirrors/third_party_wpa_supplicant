@@ -4089,6 +4089,26 @@ int hostapd_remove_iface(struct hapd_interfaces *interfaces, char *buf)
 	return -1;
 }
 
+#ifdef CARPLAY_SUPPORTED
+	void ap_sta_rssi_poll(void *eloop_ctx, void *timeout_ctx) {
+		struct hostapd_data *hapd = eloop_ctx;
+		struct sta_info *sta = timeout_ctx;
+		struct hostap_sta_driver_data data;
+
+		if (sta == NULL) {
+			return;
+		}
+		os_memset(&data, 0, sizeof(data));
+		if (hostapd_drv_read_sta_data(hapd, &data, sta->addr) == 0) {
+			sta->last_rssi = (s8) data.signal;
+			wpa_printf(MSG_DEBUG, "%s: " MACSTR_SEC " rssi=%d",
+				__func__, MAC2STR_SEC(sta->addr), sta->last_rssi);
+		}
+		eloop_cancel_timeout(ap_sta_rssi_poll, hapd, sta);
+		eloop_register_timeout(AP_STA_RSSI_POLL_INTERVAL, 0,
+						ap_sta_rssi_poll, hapd, sta);
+	}
+#endif
 
 /**
  * hostapd_new_assoc_sta - Notify that a new station associated with the AP
@@ -4186,6 +4206,11 @@ void hostapd_new_assoc_sta(struct hostapd_data *hapd, struct sta_info *sta,
 	else
 		ieee802_1x_alloc_kay_sm_hapd(hapd, sta);
 #endif /* CONFIG_MACSEC */
+
+#ifdef CARPLAY_SUPPORTED
+		eloop_cancel_timeout(ap_sta_rssi_poll, hapd, sta);
+		eloop_register_timeout(0, 0, ap_sta_rssi_poll, hapd, sta);
+#endif
 }
 
 

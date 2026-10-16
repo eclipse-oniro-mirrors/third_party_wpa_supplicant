@@ -28,6 +28,13 @@
 #ifdef CONFIG_P2P_CHR
 #include "wpa_hw_p2p_chr.h"
 #endif
+#ifdef CARPLAY_SUPPORTED
+#include "parameter.h"
+#define PARAM_VALUE_MAX_LEN 10
+#define POXIAO_SUPPORTED_TYPE_PARAM "persist.poxiao.support_type"
+#define SUPPORTED_POXIAO_COMMERCIAL "1"
+#define SUPPORTED_POXIAO_CERTIFIED "2"
+#endif
 
 u32 hostapd_sta_flags_to_drv(u32 flags)
 {
@@ -78,6 +85,23 @@ int hostapd_build_ap_extra_ies(struct hostapd_data *hapd,
 	struct wpabuf *beacon = NULL, *proberesp = NULL, *assocresp = NULL;
 	u8 buf[200], *pos;
 
+#ifdef CARPLAY_SUPPORTED
+	struct wpabuf *apple_ie = NULL;
+	u8 apple_device_ie[] = {
+		0xdd, 0x08, 0x00, 0xa0, 0x40,
+		0x00, 0x00, 0x02, 0x10, 0x21
+	};
+	char support_type[PARAM_VALUE_MAX_LEN] = {0};
+	int ret = GetParameter(POXIAO_SUPPORTED_TYPE_PARAM, "", support_type,
+			sizeof(support_type));
+	if (ret > 0 && (os_strcmp(support_type, SUPPORTED_POXIAO_COMMERCIAL) == 0 ||
+		os_strcmp(support_type, SUPPORTED_POXIAO_CERTIFIED) == 0)) {
+		if (add_buf_data(&apple_ie, apple_device_ie,
+			sizeof(apple_device_ie)) < 0) {
+			goto fail;
+		}
+	}
+#endif
 	*beacon_ret = *proberesp_ret = *assocresp_ret = NULL;
 
 #ifdef NEED_AP_MLME
@@ -225,6 +249,15 @@ int hostapd_build_ap_extra_ies(struct hostapd_data *hapd,
 #endif /* CONFIG_TESTING_OPTIONS */
 	add_buf(&assocresp, hapd->conf->assocresp_elements);
 
+#ifdef CARPLAY_SUPPORTED
+	if (ret > 0 && (os_strcmp(support_type, SUPPORTED_POXIAO_COMMERCIAL) == 0 ||
+		os_strcmp(support_type, SUPPORTED_POXIAO_CERTIFIED) == 0)) {
+		add_buf(&beacon, apple_ie);
+		add_buf(&proberesp, apple_ie);
+		add_buf(&assocresp, apple_ie);
+	}
+	wpabuf_free(apple_ie);
+#endif
 	*beacon_ret = beacon;
 	*proberesp_ret = proberesp;
 	*assocresp_ret = assocresp;
@@ -235,6 +268,9 @@ fail:
 	wpabuf_free(beacon);
 	wpabuf_free(proberesp);
 	wpabuf_free(assocresp);
+#ifdef CARPLAY_SUPPORTED
+	wpabuf_free(apple_ie);
+#endif
 	return -1;
 }
 
