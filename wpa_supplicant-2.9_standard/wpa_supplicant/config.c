@@ -625,6 +625,21 @@ static int wpa_config_parse_psk(const struct parse_data *data,
 	char decryptedData[AES_COMMON_SIZE];
 	int32_t ret = 0;
 	ret = wpa_decryption(fileName, value, strlen(value), (char *)ssid->iv, strlen((char *)ssid->iv), decryptedData);
+#ifdef WITH_GO_SIMULATION_AP
+	if(ret != 0 || strlen((char *)ssid->iv) == 0) {
+		if(ret != 0) {
+			wpa_printf(MSG_ERROR, "%s decryption failed.", __func__);
+		} else {
+			wpa_printf(MSG_ERROR, "ssid->iv is NULL");
+		}
+		if (strlen(value) >= AES_COMMON_SIZE) {
+			wpa_printf(MSG_ERROR, "%s, psk length is too long.", __func__);
+			forced_memzero(decryptedData, AES_COMMON_SIZE);
+			return -1;
+		}
+		os_memcpy(decryptedData, value, strlen(value));
+	}
+#else
 	if (ret == 0) {
 		if (strlen((char *)ssid->iv) == 0) {
 			wpa_printf(MSG_ERROR, "ssid->iv is NULL");
@@ -635,6 +650,7 @@ static int wpa_config_parse_psk(const struct parse_data *data,
 		forced_memzero(decryptedData, AES_COMMON_SIZE);
 		return 0;
 	}
+#endif
 	char *value1 = decryptedData;
 #else
 	const char *value1 = value;
