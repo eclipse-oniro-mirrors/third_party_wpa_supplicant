@@ -423,7 +423,7 @@ void p2p_process_invitation_req(struct p2p_data *p2p, const u8 *sa,
 
 fail:
 #ifdef HARMONY_CONNECTIVITY_PATCH
-#ifndef OPEN_HARMONY_MIRACAST_SINK_OPT
+#if !defined(OPEN_HARMONY_MIRACAST_SINK_OPT) && !defined(WITH_GO_SIMULATION_AP)
 	if (status == P2P_SC_SUCCESS && persistent)
 	/* receivad inviation req, need delete persistent group */
 		p2p_set_persistent_group_need_remove_flag(p2p, 1);
