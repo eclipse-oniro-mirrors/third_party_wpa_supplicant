@@ -466,6 +466,8 @@ int hostapd_set_freq_params(struct hostapd_freq_params *data,
 	enum oper_chan_width oper_chwidth_legacy;
 	u8 seg0_legacy, seg1_legacy;
 
+	wpa_printf(MSG_DEBUG, "oper_chwidth:%d center_segment0:%d center_segment1:%d",
+		oper_chwidth, center_segment0, center_segment1);
 	if (!he_cap || !he_cap->he_supported)
 		he_enabled = 0;
 	if (!eht_cap || !eht_cap->eht_supported)

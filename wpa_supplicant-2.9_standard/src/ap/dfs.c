@@ -379,6 +379,9 @@ static int dfs_get_start_chan_idx(struct hostapd_iface *iface, int *seg1_start)
 				iface->conf) - 6;
 			break;
 		case CONF_OPER_CHWIDTH_160MHZ:
+			/* Contiguous 160MHz: seg0 is the 160MHz center, so the
+			 * lowest 20MHz channel is seg0 - 14. seg1 is only used
+			 * for 80+80MHz and must not affect this calculation. */
 			channel_no = hostapd_get_oper_centr_freq_seg0_idx(
 				iface->conf) - 14;
 			break;
@@ -749,11 +752,11 @@ static int dfs_are_channels_overlapped(struct hostapd_iface *iface, int freq,
 	/* Our configuration */
 	mode = iface->current_mode;
 	start_chan_idx = dfs_get_start_chan_idx(iface, &start_chan_idx1);
+	if (start_chan_idx < 0) { return 0; }
 	n_chans = dfs_get_used_n_chans(iface, &n_chans1);
 
 	/* Check we are on DFS channel(s) */
-	if (!dfs_check_chans_radar(iface, start_chan_idx, n_chans))
-		return 0;
+	if (!dfs_check_chans_radar(iface, start_chan_idx, n_chans)) { return 0; }
 
 	/* Reported via radar event */
 	switch (chan_width) {
