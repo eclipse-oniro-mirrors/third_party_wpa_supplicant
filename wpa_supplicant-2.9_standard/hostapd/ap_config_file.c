@@ -3798,6 +3798,9 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 		conf->require_vht = atoi(pos);
 	} else if (os_strcmp(buf, "vht_oper_chwidth") == 0) {
 		conf->vht_oper_chwidth = atoi(pos);
+		if (conf->vht_oper_chwidth == CHANWIDTH_160MHZ) {
+			conf->bandwidth = AP_BANDWIDTH_160M;
+		}
 	} else if (os_strcmp(buf, "vht_oper_centr_freq_seg0_idx") == 0) {
 		conf->vht_oper_centr_freq_seg0_idx = atoi(pos);
 	} else if (os_strcmp(buf, "vht_oper_centr_freq_seg1_idx") == 0) {
@@ -5204,58 +5207,89 @@ static int hostapd_config_fill(struct hostapd_config *conf,
 
 #ifdef CONFIG_OPEN_HARMONY_PATCH
 static void hostapd_config_set_bandWidth(struct hostapd_config *conf,
-	u8 freq_seg0_idx, u8 bandWidth)
+	u8 freq_seg0_idx, u8 freq_seg1_idx, u8 bandWidth)
 {
+	/* 160MHz is only supported on the low band (36/40/44/48). If a 160M
+	 * request comes for any other channel (e.g. high band 149-161), fall
+	 * back to 80M to keep bandwidth and vht_oper_chwidth consistent. */
+	if (bandWidth == CHANWIDTH_160MHZ &&
+	    (conf->channel < CHANNEL_36 || conf->channel > CHANNEL_48)) {
+		wpa_printf(MSG_INFO,
+			   "160M not supported on channel %d, fallback to 80M",
+			   conf->channel);
+		bandWidth = CHANWIDTH_80MHZ;
+		conf->bandwidth = 0;
+		freq_seg1_idx = 0;
+	}
 	conf->vht_oper_centr_freq_seg0_idx = freq_seg0_idx;
+	conf->vht_oper_centr_freq_seg1_idx = freq_seg1_idx;
 	conf->vht_oper_chwidth = bandWidth;
 #ifdef CONFIG_IEEE80211AX
+	/* Keep HE operating fields consistent with VHT for both 80M and 160M,
+	 * since hostapd_get_oper_centr_freq_seg0_idx()/get_oper_chwidth()
+	 * return the HE values when 11ax is enabled. For a contiguous 160MHz
+	 * channel seg0 is the 160MHz center and seg1 must stay 0; seg1 is only
+	 * used by 80+80MHz. */
+	conf->he_oper_centr_freq_seg0_idx = freq_seg0_idx;
+	conf->he_oper_centr_freq_seg1_idx = freq_seg1_idx;
+	conf->he_oper_chwidth = bandWidth;
 	if (bandWidth == CHANWIDTH_160MHZ) {
 		/* only enable 11ax in ultra-fast cloning */
 		conf->ieee80211ax = 1;
-		conf->he_oper_centr_freq_seg0_idx = freq_seg0_idx;
-		conf->he_oper_chwidth = bandWidth;
+		wpa_printf(MSG_DEBUG, "he_oper_centr_freq_seg0_idx:%d",
+			   conf->he_oper_centr_freq_seg0_idx);
 	}
 #endif
 }
 
 static void CheckApBand(struct hostapd_config *conf)
 {
-	if (conf->ieee80211ac || conf->hw_mode != HOSTAPD_MODE_IEEE80211A) {
-		return;
-	}
+	/* Do not skip the 160M setup even if 11ac was already enabled by
+	 * hostapd_config_bw_auto_adaptation() during the channel line parse;
+	 * otherwise the 160M request would silently be dropped depending on
+	 * the order of the channel/vht_oper_chwidth lines. */
+	if ((conf->ieee80211ac && conf->bandwidth != AP_BANDWIDTH_160M) ||
+	    conf->hw_mode != HOSTAPD_MODE_IEEE80211A) return;
+
 	if (((conf->channel > CHANNEL_161) || (conf->channel < CHANNEL_36)) ||
-		((conf->channel > CHANNEL_48) && (conf->channel < CHANNEL_149))) {
-		return;
+		((conf->channel > CHANNEL_48) && (conf->channel < CHANNEL_149))) return;
+
+	/* 160MHz is only supported on the low band (36/40/44/48). For the high
+	 * band (149-161) keep bandwidth consistent by falling back to 80M. */
+	if (conf->bandwidth == AP_BANDWIDTH_160M &&
+	    (conf->channel < CHANNEL_36 || conf->channel > CHANNEL_48)) {
+		wpa_printf(MSG_INFO, "160M not supported on channel %d, fallback to 80M", conf->channel);
+		conf->bandwidth = 0;
 	}
 	wpa_printf(MSG_INFO, "try select 11ac");
 	switch(conf->channel) {
 		case CHANNEL_36:
 		case CHANNEL_44:
 			conf->secondary_channel = 1;
-			hostapd_config_set_bandWidth(conf, CHANNEL_42, CHANWIDTH_80MHZ);
+			hostapd_config_set_bandWidth(conf, CHANNEL_42, 0, CHANWIDTH_80MHZ);
 			if (conf->bandwidth == AP_BANDWIDTH_160M) {
-				hostapd_config_set_bandWidth(conf, CHANNEL_50, CHANWIDTH_160MHZ);
+				hostapd_config_set_bandWidth(conf, CHANNEL_50, 0, CHANWIDTH_160MHZ);
 				conf->vht_capab |= VHT_CAP_SHORT_GI_160;
 			}
 			break;
 		case CHANNEL_40:
 		case CHANNEL_48:
 			conf->secondary_channel = -1;
-			hostapd_config_set_bandWidth(conf, CHANNEL_42, CHANWIDTH_80MHZ);
+			hostapd_config_set_bandWidth(conf, CHANNEL_42, 0, CHANWIDTH_80MHZ);
 			if (conf->bandwidth == AP_BANDWIDTH_160M) {
-				hostapd_config_set_bandWidth(conf, CHANNEL_50, CHANWIDTH_160MHZ);
+				hostapd_config_set_bandWidth(conf, CHANNEL_50, 0, CHANWIDTH_160MHZ);
 				conf->vht_capab |= VHT_CAP_SHORT_GI_160;
 			}
 			break;
 		case CHANNEL_149:
 		case CHANNEL_157:
 			conf->secondary_channel = 1;
-			hostapd_config_set_bandWidth(conf, CHANNEL_155, CHANWIDTH_80MHZ);
+			hostapd_config_set_bandWidth(conf, CHANNEL_155, 0, CHANWIDTH_80MHZ);
 			break;
 		case CHANNEL_153:
 		case CHANNEL_161:
 			conf->secondary_channel = -1;
-			hostapd_config_set_bandWidth(conf, CHANNEL_155, CHANWIDTH_80MHZ);
+			hostapd_config_set_bandWidth(conf, CHANNEL_155, 0, CHANWIDTH_80MHZ);
 			break;
 		default:
 			break;

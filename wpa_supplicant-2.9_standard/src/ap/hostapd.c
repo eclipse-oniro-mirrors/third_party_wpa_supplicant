@@ -2545,9 +2545,16 @@ static int hostapd_setup_interface_complete_sync(struct hostapd_iface *iface,
 #endif /* NEED_AP_MLME */
 
 		wpa_printf(MSG_DEBUG, "Mode: %s  Channel: %d  "
-			   "Frequency: %d MHz",
+			   "Frequency: %d MHz freq_seg0_idx:%d,freq_seg1_idx:%d,oper_chwidth:%d",
 			   hostapd_hw_mode_txt(iface->conf->hw_mode),
-			   iface->conf->channel, iface->freq);
+			   iface->conf->channel, iface->freq,
+			   hostapd_get_oper_centr_freq_seg0_idx(iface->conf),
+			   hostapd_get_oper_centr_freq_seg1_idx(iface->conf),
+			   hostapd_get_oper_chwidth(iface->conf));
+		wpa_printf(MSG_INFO, "freq_seg0_idx:%d,freq_seg1_idx:%d,oper_chwidth:%d",
+			hostapd_get_oper_centr_freq_seg0_idx(hapd->iconf),
+			hostapd_get_oper_centr_freq_seg1_idx(hapd->iconf),
+			hostapd_get_oper_chwidth(hapd->iconf));
 
 #ifdef NEED_AP_MLME
 		/* Handle DFS only if it is not offloaded to the driver */
